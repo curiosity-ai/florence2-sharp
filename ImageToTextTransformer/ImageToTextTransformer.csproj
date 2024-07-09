@@ -15,8 +15,8 @@
         <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
         <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
         <PackageId>ImageToTextTransformers</PackageId>
-        <Description>TODO</Description>
-        <PackageTags>TODO</PackageTags>
+        <Description>Implementing the Florence-2-base model for image understanding. Supports captioning, OCR, and object detection with optional phrase grounding. Uses ONNX models from huggingface.co/onnx-community/Florence-2-base. Enables various output tasks including detailed captioning, region-based OCR, and flexible object detection.</Description>
+        <PackageTags>image-processing computer-vision machine-learning ai florence-2-model onnx image-captioning ocr object-detection image-understanding deep-learning neural-network</PackageTags>
     </PropertyGroup>
     
     <ItemGroup>
