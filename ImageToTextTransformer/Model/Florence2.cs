@@ -9,6 +9,20 @@ using SixLabors.ImageSharp.Processing;
 
 namespace ImageToTextTransformer;
 
+public interface IModelSource
+{
+    public enum Model
+    {
+        DecoderModelMerged,
+        EmbedTokens,
+        EncoderModel,
+        VisionEncoder
+    }
+    public bool TryGetModelPath(IModelSource.Model model, out string modelPath);
+
+    public byte[] GetModelBytes(IModelSource.Model model);
+
+}
 public class Florence2Model
 {
     private readonly  SessionOptions         _sessionOptions;
@@ -20,13 +34,23 @@ public class Florence2Model
     private readonly  CLIPImageProcessor     _imageProcessor;
     private readonly  Florence2PostProcessor _postProcessor;
 
-    public Florence2Model(SessionOptions sessionOptions = null)
+
+    private InferenceSession GetSessionForModel(IModelSource source, IModelSource.Model model)
     {
-        _sessionOptions       = sessionOptions ?? new SessionOptions();
-        _sessionDecoderMerged = new InferenceSession(ResourceLoader.GetResource(typeof(Florence2Model).Assembly, "decoder_model_merged.onnx"), _sessionOptions);
-        _sessionEmbedTokens   = new InferenceSession(ResourceLoader.GetResource(typeof(Florence2Model).Assembly, "embed_tokens.onnx"),         _sessionOptions);
-        _sessionEncoder       = new InferenceSession(ResourceLoader.GetResource(typeof(Florence2Model).Assembly, "encoder_model.onnx"),        _sessionOptions);
-        _sessionVisionEncoder = new InferenceSession(ResourceLoader.GetResource(typeof(Florence2Model).Assembly, "vision_encoder.onnx"),       _sessionOptions);
+        return source.TryGetModelPath(model, out var modelPath)
+            ? new InferenceSession(modelPath,                   _sessionOptions)
+            : new InferenceSession(source.GetModelBytes(model), _sessionOptions);
+
+    }
+
+    public Florence2Model(IModelSource modelSource, SessionOptions sessionOptions = null)
+    {
+        _sessionOptions = sessionOptions ?? new SessionOptions();
+
+        _sessionDecoderMerged = GetSessionForModel(modelSource, IModelSource.Model.DecoderModelMerged);
+        _sessionEmbedTokens   = GetSessionForModel(modelSource, IModelSource.Model.EmbedTokens);
+        _sessionEncoder       = GetSessionForModel(modelSource, IModelSource.Model.EncoderModel);
+        _sessionVisionEncoder = GetSessionForModel(modelSource, IModelSource.Model.VisionEncoder);
 
         _tokenizer = Florence2Tokenizer.Init();
 
@@ -72,7 +96,7 @@ public class Florence2Model
 
         using var registration = cancellationToken.Register(() => runOptions.Terminate = true);
 
-        using var text_features = _sessionEmbedTokens.Run(new[] { NamedOnnxValue.CreateFromTensor("inputIds", inputIdsForEncoder), }, new[] { "inputs_embeds" }, runOptions);
+        using var text_features = _sessionEmbedTokens.Run(new[] { NamedOnnxValue.CreateFromTensor("input_ids", inputIdsForEncoder), }, new[] { "inputs_embeds" }, runOptions);
         var       inputsEmbeds  = text_features[0].AsTensor<float>().ToDenseTensor();
 
         pixelValues = TensorExtension.JoinBatches(pixelValues);
@@ -81,7 +105,7 @@ public class Florence2Model
 
         var (inputsEmbedsMerged, attentionMaskMerged) = MergeInputIdsWithImageFeatures(inputsEmbeds, imageFeatures, attentionMaskForEncoder);
 
-        using var forwardOut = _sessionEncoder.Run(new[] { NamedOnnxValue.CreateFromTensor("attentionMask", attentionMaskMerged), NamedOnnxValue.CreateFromTensor("inputs_embeds", inputsEmbedsMerged), }, new[] { "last_hidden_state" }, runOptions);
+        using var forwardOut = _sessionEncoder.Run(new[] { NamedOnnxValue.CreateFromTensor("attention_mask", attentionMaskMerged), NamedOnnxValue.CreateFromTensor("inputs_embeds", inputsEmbedsMerged), }, new[] { "last_hidden_state" }, runOptions);
 
         var lastHiddenState = forwardOut[0].AsTensor<float>().ToDenseTensor();
 
@@ -104,10 +128,10 @@ public class Florence2Model
         int noRepeatNgramSize = GenerationConfig.NoRepeatNgramSize;
 
 
-        var decoderStartTokenID = GenerationConfig.DecoderStartTokenId;
+        var decoderStartTokenID = _tokenizer.TokenToID(_tokenizer.Tokens.EndOfSequence);
 
         var          decoderInputIds = TensorExtension.OnesLong(new[] { batchSize, 1 }, decoderStartTokenID);
-        List<long>[] allInputIds     = Enumerable.Range(0, batchSize).Select(_ => new List<long>(new[] { decoderStartTokenID })).ToArray();
+        List<long>[] allInputIds     = Enumerable.Range(0, batchSize).Select(_ => new List<long>(new[] { (long)decoderStartTokenID })).ToArray();
 
 
         var results = new List<string>();
@@ -135,7 +159,7 @@ public class Florence2Model
 
         while (true)
         {
-            using var decoderInputsEmbeds = _sessionEmbedTokens.Run(new[] { NamedOnnxValue.CreateFromTensor("inputIds", decoderInputIds), }, new[] { "inputs_embeds" }, runOptions); // inputIds -> input_embeds
+            using var decoderInputsEmbeds = _sessionEmbedTokens.Run(new[] { NamedOnnxValue.CreateFromTensor("input_ids", decoderInputIds), }, new[] { "inputs_embeds" }, runOptions); // inputIds -> input_embeds
 
 
             var useCacheBranche = pastKeyValues is object;
@@ -145,10 +169,10 @@ public class Florence2Model
 
             var decoderFeeds = new[]
             {
-                NamedOnnxValue.CreateFromTensor("inputs_embeds",         decoderInputsEmbedsVec),
-                NamedOnnxValue.CreateFromTensor("encoder_attentionMask", attentionMask),
-                NamedOnnxValue.CreateFromTensor("encoder_hidden_states", encoder_outputs),
-                NamedOnnxValue.CreateFromTensor("use_cache_branch",      useCacheBranch),
+                NamedOnnxValue.CreateFromTensor("inputs_embeds",          decoderInputsEmbedsVec),
+                NamedOnnxValue.CreateFromTensor("encoder_attention_mask", attentionMask),
+                NamedOnnxValue.CreateFromTensor("encoder_hidden_states",  encoder_outputs),
+                NamedOnnxValue.CreateFromTensor("use_cache_branch",       useCacheBranch),
             };
 
             pastKeyValues ??= InitPastKeyValues(new NormalizedConfig()).ToArray();
