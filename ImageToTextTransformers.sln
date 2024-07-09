@@ -10,8 +10,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "devops", "devops", "{071F25
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImageToTextTransformer", "ImageToTextTransformer\ImageToTextTransformer.csproj", "{499861F9-4343-4530-BA4E-7EB64233AC37}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BERTTokenizers", "BERTTokenizers\BERTTokenizers.csproj", "{A1545A2E-25A9-4413-AEEC-D233B65F2403}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -22,10 +20,6 @@ Global
 		{499861F9-4343-4530-BA4E-7EB64233AC37}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{499861F9-4343-4530-BA4E-7EB64233AC37}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{499861F9-4343-4530-BA4E-7EB64233AC37}.Release|Any CPU.Build.0 = Release|Any CPU
-		{A1545A2E-25A9-4413-AEEC-D233B65F2403}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A1545A2E-25A9-4413-AEEC-D233B65F2403}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A1545A2E-25A9-4413-AEEC-D233B65F2403}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A1545A2E-25A9-4413-AEEC-D233B65F2403}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

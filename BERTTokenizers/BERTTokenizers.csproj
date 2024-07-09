@@ -11,4 +11,10 @@
       <PackageReference Include="System.Text.Json" Version="8.0.3" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Folder Include="Base\" />
+      <Folder Include="Extensions\" />
+      <Folder Include="Helpers\" />
+    </ItemGroup>
+
 </Project>
