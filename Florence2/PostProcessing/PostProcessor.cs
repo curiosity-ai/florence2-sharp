@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 
-namespace ImageToTextTransformer;
+namespace Florence2;
 
 public class Florence2PostProcessor
 {
@@ -159,6 +159,7 @@ public class Florence2PostProcessor
             {
                 quadBox.Add(int.Parse(ocrLine.Groups[i].Value));
             }
+
             var dequantizedQuadBox = coordinatesQuantizer.Dequantize(quadBox.Chunk(2).Select(c => new Coordinates<int>(c)).ToArray(), imageSize).ToArray();
 
             if (areaThreshold > 0)

@@ -1,4 +1,4 @@
-namespace ImageToTextTransformer;
+namespace Florence2;
 
 public static class GenerationConfig
 {

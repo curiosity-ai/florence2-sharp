@@ -5,12 +5,12 @@ VisualStudioVersion = 17.6.33417.168
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "devops", "devops", "{071F2575-918B-4BB8-B732-6E9DB46EC013}"
 	ProjectSection(SolutionItems) = preProject
-		.devops\azure-pipelines.yml = .devops\azure-pipelines.yml
+		.devops\build-nuget-package.yml = .devops\build-nuget-package.yml
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImageToTextTransformer", "ImageToTextTransformer\ImageToTextTransformer.csproj", "{499861F9-4343-4530-BA4E-7EB64233AC37}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Florence2", "Florence2\Florence2.csproj", "{499861F9-4343-4530-BA4E-7EB64233AC37}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Test", "Test\Test.csproj", "{39B7EF54-2F53-4443-B682-C860835E938D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Florence2.Test", "Florence2.Test\Florence2.Test.csproj", "{39B7EF54-2F53-4443-B682-C860835E938D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

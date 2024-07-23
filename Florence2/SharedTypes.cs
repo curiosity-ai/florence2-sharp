@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace ImageToTextTransformer;
+namespace Florence2;
 
 public enum TaskTypes
 {

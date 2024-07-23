@@ -7,7 +7,7 @@ using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using SixLabors.ImageSharp.Processing;
 
-namespace ImageToTextTransformer;
+namespace Florence2;
 
 public interface IModelSource
 {

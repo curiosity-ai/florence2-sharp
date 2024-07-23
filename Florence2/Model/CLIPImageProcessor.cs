@@ -6,7 +6,7 @@ using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.Processing.Processors.Transforms;
 
-namespace ImageToTextTransformer;
+namespace Florence2;
 
 public class CLIPImageProcessor
 {

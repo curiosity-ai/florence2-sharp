@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace ImageToTextTransformer;
+namespace Florence2;
 
 public interface StoppingCriteria
 {

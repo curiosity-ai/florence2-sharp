@@ -1,6 +1,6 @@
 ﻿
 
-namespace ImageToTextTransformer
+namespace Florence2
 {
     public class Tokens
     {

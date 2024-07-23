@@ -8,7 +8,7 @@ using System.Numerics.Tensors;
 using System.Numerics;
 using System.Threading.Tasks;
 
-namespace ImageToTextTransformer
+namespace Florence2
 {
     public static class TensorExtension
     {

@@ -4,7 +4,7 @@ using System.Linq;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 
-namespace ImageToTextTransformer;
+namespace Florence2;
 
 public interface ILogitsSampler
 {

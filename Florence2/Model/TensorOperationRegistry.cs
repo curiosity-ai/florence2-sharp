@@ -1,7 +1,7 @@
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 
-namespace ImageToTextTransformer;
+namespace Florence2;
 
 public static class TensorOperationRegistry
 {

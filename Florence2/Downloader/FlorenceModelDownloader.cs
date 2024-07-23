@@ -1,10 +1,15 @@
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using System.Net.Http;
 using System.Net.Http.Headers;
-using ImageToTextTransformer;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using ZLogger;
 
-namespace Test;
+namespace Florence2;
 
 public class FlorenceModelDownloader : IModelSource
 {
@@ -28,7 +33,7 @@ public class FlorenceModelDownloader : IModelSource
         Directory.CreateDirectory(_modelFolderBasePath);
     }
 
-    private Task DownloadModel(IModelSource.Model model, Action<DownloadStatus> onStatusUpdate, ILogger logger = null, CancellationToken ct = default)
+    private Task DownloadModelAsync(IModelSource.Model model, Action<DownloadStatus> onStatusUpdate, ILogger logger = null, CancellationToken ct = default)
     {
         //TODO add lock for multiple call
         var modelFileName = GetModelFileName(model);
@@ -200,13 +205,13 @@ public class FlorenceModelDownloader : IModelSource
         }
     }
 
-    public async Task InitModelRepo(Action<IStatus> onStatusUpdate, ILogger logger = null, CancellationToken ct = default)
+    public async Task InitializeModelRepositoryAsync(Action<IStatus> onStatusUpdate, ILogger logger = null, CancellationToken ct = default)
     {
         foreach (var model in Enum.GetValues<IModelSource.Model>())
         {
             if (!_modelPaths.TryGetValue(model, out var modelPath))
             {
-                await DownloadModel(model, onStatusUpdate, logger, ct);
+                await DownloadModelAsync(model, onStatusUpdate, logger, ct);
             }
         }
     }
@@ -219,7 +224,7 @@ public class FlorenceModelDownloader : IModelSource
         }
         else
         {
-            throw new Exception(nameof(FlorenceModelDownloader) + " was not initialized for " + model + ". Call InitModelRepo first.");
+            throw new Exception($"{nameof(FlorenceModelDownloader)} was not initialized for {model}. Call {nameof(InitializeModelRepositoryAsync)} first.");
         }
     }
 
@@ -235,7 +240,7 @@ public class FlorenceModelDownloader : IModelSource
         }
         else
         {
-            throw new Exception(nameof(FlorenceModelDownloader) + " was not initialized for " + model + ". Call InitModelRepo first.");
+            throw new Exception($"{nameof(FlorenceModelDownloader)} was not initialized for {model}. Call {nameof(InitializeModelRepositoryAsync)} first.");
         }
     }
 
@@ -247,11 +252,11 @@ public class FlorenceModelDownloader : IModelSource
 
         if (ts > 0)
         {
-            double speed = ((double)(totalBytesRead - previousBytesRead)) / ts;
+            double speed = (totalBytesRead - previousBytesRead) / ts;
 
             return new DownloadStatus
             {
-                Progress = (float)((double)totalBytesRead / (double)totalDownloadSize),
+                Progress = (float)(totalBytesRead / (double)totalDownloadSize),
                 Message  = $"{ByteFormatter.FormatBytes(totalBytesRead)} / {ByteFormatter.FormatBytes(totalDownloadSize)} ({ByteFormatter.FormatBytes(speed)}/s) " + message
             };
         }
@@ -259,7 +264,7 @@ public class FlorenceModelDownloader : IModelSource
         {
             return new DownloadStatus
             {
-                Progress = (float)((double)totalBytesRead / (double)totalDownloadSize),
+                Progress = (float)(totalBytesRead / (double)totalDownloadSize),
                 Message  = $"{ByteFormatter.FormatBytes(totalBytesRead)} / {ByteFormatter.FormatBytes(totalDownloadSize)} " + message
             };
         }

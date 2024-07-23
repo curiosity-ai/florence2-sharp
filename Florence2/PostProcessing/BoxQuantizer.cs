@@ -1,6 +1,6 @@
 using System;
 
-namespace ImageToTextTransformer;
+namespace Florence2;
 
 public enum QuantizerMode
 {

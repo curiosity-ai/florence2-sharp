@@ -1,0 +1,57 @@
+variables:
+  projectBase:     './Florence2/Florence2.csproj'
+  solution:        './Florence2.sln'
+  buildConfiguration: 'Release'
+  targetVersion: yy.M.$(build.buildId)
+  
+pool:
+  vmImage: 'windows-latest'
+
+trigger:
+- main
+
+steps:
+- checkout: self
+  submodules: true
+  fetchDepth: 10
+  
+- task: PowerShell@2
+  displayName: 'Create CalVer Version'
+  inputs:
+    targetType: 'inline'
+    script: |
+      $dottedDate = (Get-Date).ToString("yy.M")
+      $buildID = $($env:BUILD_BUILDID) 
+      $newTargetVersion = "$dottedDate.$buildID"
+      Write-Host "##vso[task.setvariable variable=targetVersion;]$newTargetVersion"
+      Write-Host "Updated targetVersion to '$newTargetVersion'"
+
+- task: UseDotNet@2
+  displayName: 'Use .NET 8.0 SDK'
+  inputs:
+    packageType: sdk
+    version: 8.x
+    includePreviewVersions: false
+    installationPath: $(Agent.ToolsDirectory)/dotnet
+
+- task: DotNetCoreCLI@2
+  displayName: 'restore nuget'
+  inputs:
+    command: 'restore'
+    projects: '$(solution)'
+
+
+- task: DotNetCoreCLI@2
+  displayName: 'build project'
+  inputs:
+    command: 'build'
+    projects: '$(projectBase)'
+    arguments: '-c $(buildConfiguration) /p:Version=$(targetVersion)  /p:GeneratePackageOnBuild=true'
+
+- task: NuGetCommand@2
+  displayName: 'push all nuget packages'
+  inputs:
+    command: 'push'
+    packagesToPush: '**/*.nupkg'
+    nuGetFeedType: 'external'
+    publishFeedCredentials: 'nuget-curiosity-org'
