@@ -1,6 +1,6 @@
-# ImageToTextTransformers
+# Florence2
 
-ImageToTextTransformers is a C# library that implements the Florence-2-base model for advanced image understanding tasks.
+This library implements the Florence-2-base model for advanced image understanding tasks in C#.
 
 ## Features
 
@@ -14,11 +14,10 @@ ImageToTextTransformers is a C# library that implements the Florence-2-base mode
 ## Quick Start
 
 ```csharp
-using ImageToTextTransformers;
+using Florence2;
 
-
-var modelSource = ...;
-await modelSource.InitModelRepo();
+var modelSource = new FlorenceModelDownloader("./models");
+await modelSource.InitializeModelRepositoryAsync();
 var model = new Florence2Model(modelSource);
 
 using var imgStream       = ...;
