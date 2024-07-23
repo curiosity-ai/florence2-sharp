@@ -7,7 +7,6 @@ using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using ZLogger;
 
 namespace Florence2;
 
@@ -59,7 +58,7 @@ public class FlorenceModelDownloader : IModelSource
                                 Progress = 0f
                             });
 
-                            logger?.ZLogInformation("Downloading Florence2 Model {0} to {1}", model, filePath);
+                            logger?.LogInformation("Downloading Florence2 Model {0} to {1}", model, filePath);
 
                             var requestUri = $"https://models.curiosity.ai/florence-2/{modelFileName}";
 
@@ -126,7 +125,7 @@ public class FlorenceModelDownloader : IModelSource
                                         }
                                         catch (Exception exception)
                                         {
-                                            logger?.ZLogWarning(exception, "Error downloading model from {0}, will try again", requestUri);
+                                            logger?.LogWarning(exception, "Error downloading model from {0}, will try again", requestUri);
                                             Thread.Sleep(5000);
 
                                             var newRequest = new HttpRequestMessage(HttpMethod.Get, requestUri);
@@ -147,7 +146,7 @@ public class FlorenceModelDownloader : IModelSource
                                     }
                                 }
 
-                                logger?.ZLogInformation("Downloaded Florence2 Model {0} to {1}", model, filePath);
+                                logger?.LogInformation("Downloaded Florence2 Model {0} to {1}", model, filePath);
 
                                 onStatusUpdate(GetStatus(totalDownloadSize, totalDownloadSize, 0, TimeSpan.Zero, $"Downloading Florence2 Model {model}"));
 
@@ -175,7 +174,7 @@ public class FlorenceModelDownloader : IModelSource
                             }
                             catch (Exception IE)
                             {
-                                logger?.ZLogError(IE, "Error deleting {0}", filePath);
+                                logger?.LogError(IE, "Error deleting {0}", filePath);
 
                                 onStatusUpdate(new DownloadStatus
                                 {
@@ -199,7 +198,7 @@ public class FlorenceModelDownloader : IModelSource
         }
         else
         {
-            logger?.ZLogDebug($"model {model} already downloaded");
+            logger?.LogDebug($"model {model} already downloaded");
             _modelPaths.Add(model, filePath);
             return Task.CompletedTask;
         }
