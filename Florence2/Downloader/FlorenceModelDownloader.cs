@@ -33,6 +33,21 @@ public class FlorenceModelDownloader : IModelSource
         PreInitializeRepositoryFromDisk();
     }
 
+    public bool IsReady
+    {
+        get
+        {
+            foreach (var model in Enum.GetValues<IModelSource.Model>())
+            {
+                if (!_modelPaths.ContainsKey(model))
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+    }
+
     private Task DownloadModelAsync(IModelSource.Model model, Action<DownloadStatus> onStatusUpdate, ILogger logger = null, CancellationToken ct = default)
     {
         //TODO add lock for multiple call
@@ -205,11 +220,13 @@ public class FlorenceModelDownloader : IModelSource
         }
     }
 
-    public async Task InitializeModelRepositoryAsync(Action<IStatus> onStatusUpdate, ILogger logger = null, CancellationToken ct = default)
+    public async Task DownloadModelsAsync(Action<IStatus> onStatusUpdate, ILogger logger = null, CancellationToken ct = default)
     {
+        if (IsReady) return;
+
         foreach (var model in Enum.GetValues<IModelSource.Model>())
         {
-            if (!_modelPaths.TryGetValue(model, out var modelPath))
+            if (!_modelPaths.ContainsKey(model))
             {
                 await DownloadModelAsync(model, onStatusUpdate, logger, ct);
             }
@@ -241,7 +258,7 @@ public class FlorenceModelDownloader : IModelSource
         }
         else
         {
-            throw new Exception($"{nameof(FlorenceModelDownloader)} was not initialized for {model}. Call {nameof(InitializeModelRepositoryAsync)} first.");
+            throw new Exception($"{nameof(FlorenceModelDownloader)} was not initialized for {model}. Call {nameof(DownloadModelsAsync)} first.");
         }
     }
 
@@ -257,11 +274,9 @@ public class FlorenceModelDownloader : IModelSource
         }
         else
         {
-            throw new Exception($"{nameof(FlorenceModelDownloader)} was not initialized for {model}. Call {nameof(InitializeModelRepositoryAsync)} first.");
+            throw new Exception($"{nameof(FlorenceModelDownloader)} was not initialized for {model}. Call {nameof(DownloadModelsAsync)} first.");
         }
     }
-
-
 
     private static DownloadStatus GetStatus(long totalDownloadSize, long totalBytesRead, long previousBytesRead, TimeSpan elapsed, string message = null)
     {
