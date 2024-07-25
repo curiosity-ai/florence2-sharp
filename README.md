@@ -17,7 +17,7 @@ This library implements the Florence-2-base model for advanced image understandi
 using Florence2;
 
 var modelSource = new FlorenceModelDownloader("./models");
-await modelSource.InitializeModelRepositoryAsync();
+await modelSource.DownloadModelsAsync();
 var model = new Florence2Model(modelSource);
 
 using var imgStream       = ...;
