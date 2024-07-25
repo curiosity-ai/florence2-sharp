@@ -135,14 +135,14 @@ public class Florence2PostProcessor
     }
 
 
-    public List<LabledOcr> ParseOcrFromTextAndSpans(
+    public List<LabeledOCRBox> ParseOcrFromTextAndSpans(
         string                  text,
         (int width, int height) imageSize,
         double                  areaThreshold = -1.0)
     {
         var pattern = @"(.+?)<loc_(\d+)><loc_(\d+)><loc_(\d+)><loc_(\d+)><loc_(\d+)><loc_(\d+)><loc_(\d+)><loc_(\d+)>";
 
-        var instances = new List<LabledOcr>();
+        var instances = new List<LabeledOCRBox>();
         text = text.Replace("<s>", "");
 
         // OCR with regions
@@ -183,7 +183,7 @@ public class Florence2PostProcessor
                 }
             }
 
-            instances.Add(new LabledOcr
+            instances.Add(new LabeledOCRBox
             {
                 QuadBox = dequantizedQuadBox,
                 Text    = ReplaceStartAndEndToken(ocrContent)
@@ -385,9 +385,9 @@ public class Florence2PostProcessor
                 foreach (Match polygonParsed in polygonsParsed)
                 {
                     var polygon = Regex.Matches(polygonParsed.Groups[1].Value, @"<loc_(\d+)>")
-                       .Cast<Match>()
-                       .Select(m => int.Parse(m.Groups[1].Value))
-                       .ToList();
+                                       .Cast<Match>()
+                                       .Select(m => int.Parse(m.Groups[1].Value))
+                                       .ToList();
 
                     if (withBoxAtStart && bbox is null)
                     {
@@ -436,7 +436,7 @@ public class Florence2PostProcessor
         return text.Replace("<s>", "").Replace("</s>", "");
     }
 
-    public FinalResult PostProcessGeneration(string text, TaskTypes task, (int, int) imageSize)
+    public FlorenceResults PostProcessGeneration(string text, TaskTypes task, (int, int) imageSize)
     {
         PostProcessingTypes postPRocessingTask = GetPostProcessingType(task);
 
@@ -444,7 +444,7 @@ public class Florence2PostProcessor
         {
             case PostProcessingTypes.pure_text:
             {
-                return new FinalResult()
+                return new FlorenceResults()
                 {
                     PureText = ReplaceStartAndEndToken(text)
                 };
@@ -454,7 +454,7 @@ public class Florence2PostProcessor
             {
                 var ocrs = ParseOcrFromTextAndSpans(text, imageSize, parseTaskConfigs[postPRocessingTask].AREA_THRESHOLD ?? 0.01);
 
-                return new FinalResult()
+                return new FlorenceResults()
                 {
                     OCRBBox = ocrs.ToArray()
                 };
@@ -468,9 +468,9 @@ public class Florence2PostProcessor
                     imageSize: imageSize
                 );
 
-                return new FinalResult()
+                return new FlorenceResults()
                 {
-                    BBoxes = boxes.ToArray(),
+                    BoundingBoxes = boxes.ToArray(),
                 };
             }
             case PostProcessingTypes.phrase_grounding:
@@ -480,16 +480,16 @@ public class Florence2PostProcessor
                     imageSize
                 );
 
-                return new FinalResult()
+                return new FlorenceResults()
                 {
-                    BBoxes = bboxes.ToArray(),
+                    BoundingBoxes = bboxes.ToArray(),
                 };
             }
             case PostProcessingTypes.description_with_polygons:
             {
                 var polygons = ParseDescriptionWithPolygonsFromTextAndSpans(text, imageSize);
 
-                return new FinalResult()
+                return new FlorenceResults()
                 {
                     Polygons = polygons.ToArray(),
                 };
@@ -498,7 +498,7 @@ public class Florence2PostProcessor
             {
                 var polygons = ParseDescriptionWithPolygonsFromTextAndSpans(text, imageSize, true);
 
-                return new FinalResult()
+                return new FlorenceResults()
                 {
                     Polygons = polygons.ToArray(),
                 };
@@ -509,7 +509,7 @@ public class Florence2PostProcessor
                 {
                     var polygons = ParseDescriptionWithPolygonsFromTextAndSpans(text, imageSize);
 
-                    return new FinalResult()
+                    return new FlorenceResults()
                     {
                         Polygons = polygons.ToArray(),
                     };
@@ -518,9 +518,9 @@ public class Florence2PostProcessor
                 {
                     var bboxes = ParseDescriptionWithBboxesFromTextAndSpans(text, imageSize);
 
-                    return new FinalResult()
+                    return new FlorenceResults()
                     {
-                        BBoxes = bboxes.ToArray(),
+                        BoundingBoxes = bboxes.ToArray(),
                     };
                 }
             }

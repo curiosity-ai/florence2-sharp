@@ -21,6 +21,7 @@ public enum TaskTypes
     REGION_TO_OCR,
     REGION_PROPOSAL
 }
+
 public class BoundingBox<T> where T : struct, IComparable<T>, IConvertible, IEquatable<T>, IFormattable
 {
 
@@ -74,16 +75,16 @@ public class LabeledBoundingBoxes
     public BoundingBox<float>[] BBoxes { get; set; }
     public string               Label  { get; set; }
 }
-public class LabledOcr
+public class LabeledOCRBox
 {
     public Coordinates<float>[] QuadBox { get; set; }
     public string               Text    { get; set; }
 }
-public class FinalResult
+public class FlorenceResults
 {
-    public LabledOcr[]            OCRBBox  { get; set; }
+    public LabeledOCRBox[]        OCRBBox  { get; set; }
     public string                 PureText { get; set; }
-    public LabeledBoundingBoxes[] BBoxes   { get; set; }
+    public LabeledBoundingBoxes[] BoundingBoxes   { get; set; }
     public LabeledPolygon[]       Polygons { get; set; }
 }
 public class LabeledPolygon

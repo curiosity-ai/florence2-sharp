@@ -85,7 +85,7 @@ public class Florence2Model
         }
     }
 
-    public FinalResult[] Run(TaskTypes task, Stream imgStream, string textInput, CancellationToken cancellationToken)
+    public FlorenceResults[] Run(TaskTypes task, Stream imgStream, string textInput, CancellationToken cancellationToken)
     {
         using var runOptions = new RunOptions();
 
