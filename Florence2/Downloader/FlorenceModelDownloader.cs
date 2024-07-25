@@ -30,6 +30,7 @@ public class FlorenceModelDownloader : IModelSource
     {
         _modelFolderBasePath = modelFolderBasePath;
         Directory.CreateDirectory(_modelFolderBasePath);
+        PreInitializeRepositoryFromDisk();
     }
 
     private Task DownloadModelAsync(IModelSource.Model model, Action<DownloadStatus> onStatusUpdate, ILogger logger = null, CancellationToken ct = default)
@@ -211,6 +212,23 @@ public class FlorenceModelDownloader : IModelSource
             if (!_modelPaths.TryGetValue(model, out var modelPath))
             {
                 await DownloadModelAsync(model, onStatusUpdate, logger, ct);
+            }
+        }
+    }
+
+    private void PreInitializeRepositoryFromDisk()
+    {
+        foreach (var model in Enum.GetValues<IModelSource.Model>())
+        {
+            if (!_modelPaths.ContainsKey(model))
+            {
+                var modelFileName = GetModelFileName(model);
+                var filePath = Path.Combine(_modelFolderBasePath, modelFileName);
+
+                if (File.Exists(filePath) && new FileInfo(filePath).Length != 0)
+                {
+                    _modelPaths[model] = filePath;
+                }
             }
         }
     }
