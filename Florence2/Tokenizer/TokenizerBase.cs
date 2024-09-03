@@ -10,7 +10,14 @@ namespace BERTTokenizers.Base
     {
         protected readonly List<string>            _vocabulary;
         protected readonly Dictionary<string, int> _vocabularyDict;
-        public readonly    Tokens                 Tokens;
+        public readonly    Tokens                  Tokens;
+
+        public static int MaxWordLength = 50;
+
+        public static void SetMaxWordLength(int maxWordLength)
+        {
+            MaxWordLength = maxWordLength;
+        }
 
         public TokenizerBase(List<string> vocabulary, Tokens tokens)
         {
@@ -29,8 +36,8 @@ namespace BERTTokenizers.Base
 
         public List<(long[] InputIds, long[] TokenTypeIds, long[] AttentionMask)> Encode(params string[] texts)
         {
-            const int MaxTokens = 512; //Maximum token length supported by MiniLM model
-            var       tokenized = Tokenize(texts);
+            const int MaxTokens = 1024; 
+            var       tokenized = Tokenize(MaxTokens, texts);
 
             if (tokenized.Count == 0)
             {
@@ -85,15 +92,15 @@ namespace BERTTokenizers.Base
             return untokens;
         }
 
-        public List<(string Token, int VocabularyIndex, long SegmentIndex)[]> Tokenize(params string[] texts)
+        public List<(string Token, int VocabularyIndex, long SegmentIndex)[]> Tokenize(int maxTokens, params string[] texts)
         {
             return texts
                .Select(text =>
                 {
                     var tokenAndIndex = new[] { Tokens.Classification }
-                       .Concat(TokenizeSentence(text))
+                       .Concat(TokenizeSentence(text).Take(maxTokens))
                        .Concat(new[] { Tokens.Separation })
-                       .SelectMany(TokenizeSubwords);
+                       .SelectMany(TokenizeSubwords).Take(maxTokens);
                     var segmentIndexes = SegmentIndex(tokenAndIndex);
 
                     return tokenAndIndex.Zip(segmentIndexes, (tokenindex, segmentindex)
@@ -122,6 +129,8 @@ namespace BERTTokenizers.Base
 
         private IEnumerable<(string Token, int VocabularyIndex)> TokenizeSubwords(string word)
         {
+            if (word.Length > MaxWordLength) yield break; //Ignore words that are too long
+
             if (_vocabularyDict.TryGetValue(word, out var wordIndex))
             {
                 yield return (word, wordIndex);
