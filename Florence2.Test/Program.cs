@@ -29,7 +29,7 @@ public static class Programm
         
         Directory.CreateDirectory(outPath);
 
-        await modelSource.InitializeModelRepositoryAsync(status => logger?.ZLogInformation($"{status.Progress:P0} {status.Error} {status.Message}"), logger, CancellationToken.None);
+        await modelSource.DownloadModelsAsync(status => logger?.ZLogInformation($"{status.Progress:P0} {status.Error} {status.Message}"), logger, CancellationToken.None);
 
         var modelSession = new Florence2Model(modelSource);
 
@@ -59,10 +59,10 @@ public static class Programm
 
     private static Stream LoadImage(string path) => File.OpenRead(path);
 
-    private static void DrawInline(Stream imgStreamResult, TaskTypes task, string userText, FinalResult[] results, string? outFolder = null)
+    private static void DrawInline(Stream imgStreamResult, TaskTypes task, string userText, FlorenceResults[] results, string? outFolder = null)
     {
         if (!results.Any(r => (r.OCRBBox is object && r.OCRBBox.Any())
-         || (r.BBoxes is object                    && r.BBoxes.Any())
+         || (r.BoundingBoxes is object             && r.BoundingBoxes.Any())
          || (r.Polygons is object                  && r.Polygons.Any()))) return;
 
         outFolder ??= Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
@@ -85,11 +85,11 @@ public static class Programm
                 {
                     var finalResult = results[index];
 
-                    if (finalResult.BBoxes is object)
+                    if (finalResult.BoundingBoxes is object)
                     {
                         var i = 0;
 
-                        foreach (var bbox1 in finalResult.BBoxes)
+                        foreach (var bbox1 in finalResult.BoundingBoxes)
                         {
                             PointF? labelPoint = null;
 
