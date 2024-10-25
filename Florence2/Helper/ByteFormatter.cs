@@ -1,6 +1,7 @@
 ﻿using System;
 
 namespace Florence2;
+
 public static class ByteFormatter
 {
     public static string FormatBytes(double a, int digits = 1)

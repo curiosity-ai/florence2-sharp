@@ -240,7 +240,7 @@ public class FlorenceModelDownloader : IModelSource
             if (!_modelPaths.ContainsKey(model))
             {
                 var modelFileName = GetModelFileName(model);
-                var filePath = Path.Combine(_modelFolderBasePath, modelFileName);
+                var filePath      = Path.Combine(_modelFolderBasePath, modelFileName);
 
                 if (File.Exists(filePath) && new FileInfo(filePath).Length != 0)
                 {

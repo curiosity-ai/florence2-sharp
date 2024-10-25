@@ -1,6 +1,4 @@
-﻿
-
-namespace Florence2
+﻿namespace Florence2
 {
     public class Tokens
     {

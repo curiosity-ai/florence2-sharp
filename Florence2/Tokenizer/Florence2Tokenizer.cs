@@ -107,7 +107,7 @@ public class Florence2Tokenizer
 //           .SelectMany(o => SplitAndKeep(o, ".,;:\\/?!#$%()=+-*\"'–_`<>&^@{}[]|~'".ToArray()))
 //           .Select(o => o.ToLower());
     }
-    
+
     public static IEnumerable<string> SplitAndKeep(
         string        inputString,
         params char[] delimiters)

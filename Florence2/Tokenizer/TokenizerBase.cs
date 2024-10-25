@@ -36,7 +36,7 @@ namespace BERTTokenizers.Base
 
         public List<(long[] InputIds, long[] TokenTypeIds, long[] AttentionMask)> Encode(params string[] texts)
         {
-            const int MaxTokens = 1024; 
+            const int MaxTokens = 1024;
             var       tokenized = Tokenize(MaxTokens, texts);
 
             if (tokenized.Count == 0)

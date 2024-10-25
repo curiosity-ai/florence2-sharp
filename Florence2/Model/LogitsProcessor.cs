@@ -26,7 +26,6 @@ public interface LogitsProcessor
 
     }
 }
-
 /**
  * A logits processor that disallows ngrams of a certain size to be repeated.
  */
@@ -135,7 +134,7 @@ public class NoRepeatNGramLogitsProcessor : LogitsProcessor
             return bannedTokens;
         }
     }
-    
+
     public void Process(int batchID, long[] input_ids, DenseTensor<float> logits)
     {
         long[] bannedTokens = this.CalcBannedNgramTokens(batchID, input_ids);

@@ -82,10 +82,10 @@ public class LabeledOCRBox
 }
 public class FlorenceResults
 {
-    public LabeledOCRBox[]        OCRBBox  { get; set; }
-    public string                 PureText { get; set; }
-    public LabeledBoundingBoxes[] BoundingBoxes   { get; set; }
-    public LabeledPolygon[]       Polygons { get; set; }
+    public LabeledOCRBox[]        OCRBBox       { get; set; }
+    public string                 PureText      { get; set; }
+    public LabeledBoundingBoxes[] BoundingBoxes { get; set; }
+    public LabeledPolygon[]       Polygons      { get; set; }
 }
 public class LabeledPolygon
 {

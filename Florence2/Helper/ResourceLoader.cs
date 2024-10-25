@@ -2,6 +2,7 @@
 using System.Reflection;
 
 namespace Florence2;
+
 public static class ResourceLoader
 {
     public static Stream OpenResource(Assembly assembly, string resourceFile)
