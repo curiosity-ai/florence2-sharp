@@ -110,8 +110,7 @@ public class Florence2PostProcessor
             },
             new ParseTask
             {
-                TASK_NAME      = PostProcessingTypes.ocr_with_region,
-                AREA_THRESHOLD = 0.01
+                TASK_NAME = PostProcessingTypes.ocr_with_region,
             },
             new ParseTask
             {
@@ -130,15 +129,12 @@ public class Florence2PostProcessor
     public class ParseTask
     {
         public PostProcessingTypes TASK_NAME            { get; set; }
-        public double?             AREA_THRESHOLD       { get; set; }
         public bool                FILTER_BY_BLACK_LIST { get; set; } = false;
     }
 
-
     public List<LabeledOCRBox> ParseOcrFromTextAndSpans(
         string                  text,
-        (int width, int height) imageSize,
-        double                  areaThreshold = -1.0)
+        (int width, int height) imageSize)
     {
         var pattern = @"(.+?)<loc_(\d+)><loc_(\d+)><loc_(\d+)><loc_(\d+)><loc_(\d+)><loc_(\d+)><loc_(\d+)><loc_(\d+)>";
 
@@ -146,9 +142,7 @@ public class Florence2PostProcessor
         text = text.Replace("<s>", "");
 
         // OCR with regions
-        var parsed      = Regex.Matches(text, pattern);
-        int imageWidth  = imageSize.width;
-        int imageHeight = imageSize.height;
+        var parsed = Regex.Matches(text, pattern);
 
         foreach (Match ocrLine in parsed)
         {
@@ -161,27 +155,6 @@ public class Florence2PostProcessor
             }
 
             var dequantizedQuadBox = coordinatesQuantizer.Dequantize(quadBox.Chunk(2).Select(c => new Coordinates<int>(c)).ToArray(), imageSize).ToArray();
-
-            if (areaThreshold > 0)
-            {
-                var xCoords = new List<double>();
-                var yCoords = new List<double>();
-
-
-                foreach (var t in dequantizedQuadBox)
-                {
-                    xCoords.Add(t.x);
-                    yCoords.Add(t.y);
-                }
-
-                // Apply the Shoelace formula
-                double area = 0.5 * Math.Abs(Enumerable.Range(0, 4).Sum(i => xCoords[i] * yCoords[(i + 1) % 4] - xCoords[(i + 1) % 4] * yCoords[i]));
-
-                if (area < (imageWidth * imageHeight) * areaThreshold)
-                {
-                    continue;
-                }
-            }
 
             instances.Add(new LabeledOCRBox
             {
@@ -385,9 +358,9 @@ public class Florence2PostProcessor
                 foreach (Match polygonParsed in polygonsParsed)
                 {
                     var polygon = Regex.Matches(polygonParsed.Groups[1].Value, @"<loc_(\d+)>")
-                                       .Cast<Match>()
-                                       .Select(m => int.Parse(m.Groups[1].Value))
-                                       .ToList();
+                       .Cast<Match>()
+                       .Select(m => int.Parse(m.Groups[1].Value))
+                       .ToList();
 
                     if (withBoxAtStart && bbox is null)
                     {
@@ -438,9 +411,9 @@ public class Florence2PostProcessor
 
     public FlorenceResults PostProcessGeneration(string text, TaskTypes task, (int, int) imageSize)
     {
-        PostProcessingTypes postPRocessingTask = GetPostProcessingType(task);
+        PostProcessingTypes postProcessingTask = GetPostProcessingType(task);
 
-        switch (postPRocessingTask)
+        switch (postProcessingTask)
         {
             case PostProcessingTypes.pure_text:
             {
@@ -452,7 +425,7 @@ public class Florence2PostProcessor
             }
             case PostProcessingTypes.ocr_with_region:
             {
-                var ocrs = ParseOcrFromTextAndSpans(text, imageSize, parseTaskConfigs[postPRocessingTask].AREA_THRESHOLD ?? 0.01);
+                var ocrs = ParseOcrFromTextAndSpans(text, imageSize);
 
                 return new FlorenceResults()
                 {
@@ -526,7 +499,7 @@ public class Florence2PostProcessor
             }
             default:
             {
-                throw new ArgumentException($"Unknown task answer post processing type: {postPRocessingTask}");
+                throw new ArgumentException($"Unknown task answer post processing type: {postProcessingTask}");
             }
         }
     }
