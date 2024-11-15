@@ -85,21 +85,21 @@ public class Florence2Model
         }
     }
 
-    public FlorenceResults[] Run(TaskTypes task, Stream imgStream, string textInput, CancellationToken cancellationToken)
+    public FlorenceResults[] Run(TaskTypes task, Stream[] imgStreams, string textInput, CancellationToken cancellationToken)
     {
         using var runOptions = new RunOptions();
 
-        var prompts = new string[] { ConstructPrompts(task, textInput) };
+        var prompts = Enumerable.Repeat(ConstructPrompts(task, textInput), imgStreams.Length).ToArray();
 
         var (inputIdsForEncoder, attentionMaskForEncoder) = GetTextInputs(prompts);
-        var (pixelValues, imgSize)                        = _imageProcessor.Preprocess(imgStream);
+
+        var (pixelValues, imgSizes) = _imageProcessor.Preprocess(imgStreams);
 
         using var registration = cancellationToken.Register(() => runOptions.Terminate = true);
 
         using var text_features = _sessionEmbedTokens.Run(new[] { NamedOnnxValue.CreateFromTensor("input_ids", inputIdsForEncoder), }, new[] { "inputs_embeds" }, runOptions);
         var       inputsEmbeds  = text_features[0].AsTensor<float>().ToDenseTensor();
 
-        pixelValues = TensorExtension.JoinBatches(pixelValues);
         using var imageFeaturesResult = _sessionVisionEncoder.Run(new[] { NamedOnnxValue.CreateFromTensor("pixel_values", pixelValues), }, new[] { "image_features" }, runOptions);
         var       imageFeatures       = imageFeaturesResult[0].AsTensor<float>().ToDenseTensor();
 
@@ -113,31 +113,27 @@ public class Florence2Model
 
         var result = GenerationLoop(attentionMaskMerged, encoderOutputs, runOptions);
 
-        return result.Select(r => _postProcessor.PostProcessGeneration(r, task, imgSize)).ToArray();
+        return result.Select((r, i) => _postProcessor.PostProcessGeneration(r, task, imgSizes[i])).ToArray();
 
     }
 
     private List<string> GenerationLoop(DenseTensor<long> attentionMask, DenseTensor<float> encoder_outputs, RunOptions runOptions)
     {
-        var batchSize  = 1;
-        var batchIndex = 0;
-        var maxLength  = GenerationConfig.MaxLength;
-        var numBeams   = GenerationConfig.NumBeams;
-        var topK       = GenerationConfig.TopK;
+        var batchSize = attentionMask.Dimensions[0];
+        var maxLength = GenerationConfig.MaxLength;
+        var numBeams  = GenerationConfig.NumBeams;
+        var topK      = GenerationConfig.TopK;
 
         int noRepeatNgramSize = GenerationConfig.NoRepeatNgramSize;
-
 
         var decoderStartTokenID = _tokenizer.TokenToID(_tokenizer.Tokens.EndOfSequence);
 
         var          decoderInputIds = TensorExtension.OnesLong(new[] { batchSize, 1 }, decoderStartTokenID);
         List<long>[] allInputIds     = Enumerable.Range(0, batchSize).Select(_ => new List<long>(new[] { (long)decoderStartTokenID })).ToArray();
 
-
         var results = new List<string>();
 
         NamedOnnxValue[] pastKeyValues = null;
-
 
         var logitsProcessors = new List<LogitsProcessor>();
 
@@ -147,15 +143,17 @@ public class Florence2Model
 
         var sampler = new BeamSearchSampler(TensorOperationRegistry.TopKSession(_sessionOptions), topK: topK, numBeams: numBeams);
 
+        var eosToken = _tokenizer.TokenToID(_tokenizer.Tokens.EndOfSequence);
 
         var stoppingCriteria = new List<StoppingCriteria>();
         stoppingCriteria.Add(new MaxLengthCriteria(maxLength));
-        stoppingCriteria.Add(new EosTokenCriteria(_tokenizer.TokenToID(_tokenizer.Tokens.EndOfSequence)));
+        stoppingCriteria.Add(new EosTokenCriteria(eosToken));
 
         var decoder = new ByteLevelDecoder(_tokenizer.AddedTokens);
 
 
         double[] scores = new double[batchSize];
+        var      isDone = new bool[batchSize];
 
         while (true)
         {
@@ -191,32 +189,35 @@ public class Florence2Model
 
             var logitsTensorProcessed = new DenseTensor<float>(new Memory<float>(logitsTensor.ToArray()), new[] { logitsTensor.Dimensions[0], logitsTensor.Dimensions[2] }, logitsTensor.IsReversedStride);
 
-            foreach (var logitsProcessor in logitsProcessors)
+            var generatedInputIds = new long[batchSize];
+
+            for (int batchIndex = 0; batchIndex < batchSize; batchIndex++)
             {
-                logitsProcessor.Process(batchIndex, allInputIds[batchIndex].ToArray(), logitsTensorProcessed);
+                if (isDone[batchIndex])
+                {
+                    generatedInputIds[batchIndex] = eosToken;
+                    continue;
+                }
+
+                foreach (var logitsProcessor in logitsProcessors)
+                {
+                    logitsProcessor.Process(batchIndex, allInputIds[batchIndex].ToArray(), logitsTensorProcessed);
+                }
+
+                var sampledTokens = sampler.Sample(batchIndex, logitsTensorProcessed);
+
+                foreach (var (token, score) in sampledTokens)
+                {
+                    scores[batchIndex] += score;
+                    var batchAllInputIds = allInputIds[batchIndex] ?? new List<long>();
+                    batchAllInputIds.Add(token);
+                    allInputIds[batchIndex] = batchAllInputIds;
+
+                    generatedInputIds[batchIndex] = token;
+                    break;
+                }
             }
 
-            var sampledTokens = sampler.Sample(batchIndex, logitsTensorProcessed);
-
-            var generatedInputIds = new List<long>[batchSize];
-
-
-            foreach (var (token, score) in sampledTokens)
-            {
-                scores[batchIndex] += score;
-                var batchAllInputIds = allInputIds[batchIndex] ?? new List<long>();
-                batchAllInputIds.Add(token);
-                allInputIds[batchIndex] = batchAllInputIds;
-
-                var batchgeneratedInputIds = generatedInputIds[batchIndex] ?? new List<long>();
-                batchgeneratedInputIds.Add(token);
-                generatedInputIds[batchIndex] = batchgeneratedInputIds;
-                // TODO: Support beam search or just remove this
-                break;
-            }
-
-
-            var isDone = new bool[batchSize];
 
             foreach (var stoppingCriterion in stoppingCriteria)
             {
@@ -235,7 +236,7 @@ public class Florence2Model
             }
             else
             {
-                decoderInputIds = new DenseTensor<long>(generatedInputIds.SelectMany(ids => ids).ToArray(), dimensions: new int[] { generatedInputIds.Length, 1 });
+                decoderInputIds = new DenseTensor<long>(generatedInputIds, dimensions: new int[] { generatedInputIds.Length, 1 });
             }
         }
 
