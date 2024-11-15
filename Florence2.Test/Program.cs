@@ -24,36 +24,29 @@ public static class Programm
         var modelSource = new FlorenceModelDownloader("./models");
 
         var outPath = "./output";
-        
+
         if (Directory.Exists(outPath)) Directory.Delete(outPath, true);
-        
+
         Directory.CreateDirectory(outPath);
 
         await modelSource.DownloadModelsAsync(status => logger?.ZLogInformation($"{status.Progress:P0} {status.Error} {status.Message}"), logger, CancellationToken.None);
 
         var modelSession = new Florence2Model(modelSource);
 
-        foreach (var task in Enum.GetValues<TaskTypes>())
+        foreach (var task in new TaskTypes[] { TaskTypes.OCR_WITH_REGION })
         {
-            using var imgStream       = LoadImage("book.jpg");
-            using var imgStreamResult = LoadImage("book.jpg");
+            var sw = Stopwatch.StartNew();
+//            using var imgStream2 = LoadImage("ocrsample.png");
+            using var imgStream  = LoadImage("book.jpg");
+//            using var imgStreamResult = LoadImage("ocrsample.png");
 
-            var results = modelSession.Run(task, imgStream, textInput: "DUANE", CancellationToken.None);
+            var results = modelSession.Run(task, new[] {  imgStream }, textInput: null, CancellationToken.None);
+            
+//            DrawInline(imgStreamResult, task, userText: null, results, outFolder: outPath);
 
-            DrawInline(imgStreamResult, task, "DUANE", results, outFolder: outPath);
+            logger?.ZLogInformation($"{task} : {JsonSerializer.Serialize(results, new JsonSerializerOptions() { WriteIndented = true })}");
+            logger.ZLogInformation($"Total: {sw.Elapsed:g}");
 
-            logger?.ZLogInformation($"{task} : {JsonSerializer.Serialize(results)}");
-        }
-
-        foreach (var task in Enum.GetValues<TaskTypes>())
-        {
-            using var imgStream       = LoadImage("car.jpg");
-            using var imgStreamResult = LoadImage("car.jpg");
-
-            var results = modelSession.Run(task, imgStream, textInput: "window", CancellationToken.None);
-            DrawInline(imgStreamResult, task, "window", results, outFolder: outPath);
-
-            logger?.ZLogInformation($"{task} : {JsonSerializer.Serialize(results)}");
         }
     }
 
@@ -75,7 +68,7 @@ public static class Programm
         }
 
         var fontFamily = DefaultFont.Value;
-        var font = fontFamily.CreateFont(12, FontStyle.Italic);
+        var font       = fontFamily.CreateFont(12, FontStyle.Italic);
 
         using (var image = Image.Load<Rgba32>(imgStreamResult))
         {
@@ -186,13 +179,13 @@ public static class Programm
         }
         else if (OperatingSystem.IsLinux())
         {
-            best = SystemFonts.TryGet("Arial", out var arial) ? arial :
-                SystemFonts.TryGet("Ubuntu", out var sf) ? sf :
-                SystemFonts.TryGet("Liberation Sans", out var ls) ? ls :
-                SystemFonts.TryGet("DejaVu Sans", out var dvs) ? dvs :
-                SystemFonts.TryGet("Rasa", out var rasa) ? rasa :
-                SystemFonts.TryGet("FreeSans", out var fs) ? fs :
-                                                                    null;
+            best = SystemFonts.TryGet("Arial",        out var arial) ? arial :
+                SystemFonts.TryGet("Ubuntu",          out var sf)    ? sf :
+                SystemFonts.TryGet("Liberation Sans", out var ls)    ? ls :
+                SystemFonts.TryGet("DejaVu Sans",     out var dvs)   ? dvs :
+                SystemFonts.TryGet("Rasa",            out var rasa)  ? rasa :
+                SystemFonts.TryGet("FreeSans",        out var fs)    ? fs :
+                                                                       null;
         }
         return best ?? SystemFonts.Families.FirstOrDefault(f => f.Name.Contains("Sans"), SystemFonts.Families.First());
     }

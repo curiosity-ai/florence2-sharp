@@ -34,7 +34,16 @@ class BeamSearchSampler : ILogitsSampler
             k = Math.Min(this.top_k, k);
         }
 
-        var result = TensorOperationRegistry.CallTopK(topKSession, logits, new DenseTensor<long>(new long[] { k }, new int[] { 1 }));
+        var batchSize  = logits.Dimensions[0];
+        var dimensions = logits.Dimensions.ToArray();
+        dimensions[0] = 1;
+
+        var newLength = dimensions[1];
+        var start     = batchIdx * newLength;
+
+        var logitsBatch = new DenseTensor<float>(logits.Buffer.Slice(start, newLength), dimensions);
+
+        var result = TensorOperationRegistry.CallTopK(topKSession, logitsBatch, new DenseTensor<long>(new long[] { k }, new int[] { 1 }));
         var v      = result.First(v => v.Name == "v").AsTensor<float>().ToDenseTensor().ToArray();
         var i      = result.First(v => v.Name == "i").AsTensor<long>().ToDenseTensor().ToArray();
 
