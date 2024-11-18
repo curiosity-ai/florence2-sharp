@@ -438,6 +438,29 @@ namespace Florence2
 //
 //        }
 
+        public static DenseTensor<float> JoinBatches(params DenseTensor<float>[] tensors)
+        {
+            if (tensors.Length == 1)
+            {
+                var tensor = tensors[0];
+                var dims   = tensors[0].Dimensions.ToArray().Prepend(1).ToArray();
+                return new DenseTensor<float>(tensor.Buffer, dims);
+            }
+
+            var dimensions = tensors[0].Dimensions.ToArray().Prepend(tensors.Length).ToArray();
+
+            var buffer = new DenseTensor<float>(dimensions);
+
+            for (int i = 0; i < tensors.Length; i++)
+            {
+                tensors[i].Buffer.CopyTo(buffer.Buffer.Slice(i * (int)tensors[i].Length, (int)tensors[i].Length));
+            }
+
+            return buffer;
+        }
+
+
+
         /// <summary>
         /// Concatenates the specified tensors along the specified axis.
         /// </summary>

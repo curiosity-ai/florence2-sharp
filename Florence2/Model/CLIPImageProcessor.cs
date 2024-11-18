@@ -22,46 +22,39 @@ public class CLIPImageProcessor
 
     }
 
-    public (DenseTensor<float> pixel_values, (int imgWidth, int imgHeight)[] imgSizes) Preprocess(params Stream[] imgStream)
+    public (DenseTensor<float> pixel_values, (int imgWidth, int imgHeight) imgSize) Preprocess(Stream imgStream)
     {
         //TODO pius: this is not 100% the same as the python pillow library. The handling of JPG color profiles seems to be different as well as how the resizing alhorithm works. (even though both ar Bicubic)
 
-        DenseTensor<float> input_normalized = new DenseTensor<float>(new[] { imgStream.Length, 3, _config.CropWidth, _config.CropHeight });
+        DenseTensor<float> input_normalized = new DenseTensor<float>(new[] { 3, _config.CropWidth, _config.CropHeight });
 
-        (int imgWidth, int imgHeight)[] imgSizes = new (int imgWidth, int imgHeight)[imgStream.Length];
+        int imgHeight = -1;
+        int imgWidth  = -1;
 
-        for (int i = 0; i < imgStream.Length; i++)
+        using (var image = Image.Load<Rgba32>(imgStream))
         {
-            int imgHeight = -1;
-            int imgWidth  = -1;
+            imgHeight = image.Height;
+            imgWidth  = image.Width;
 
-            using (var image = Image.Load<Rgba32>(imgStream[i]))
+            image.Mutate(x => x.Resize(_config.CropWidth, _config.CropHeight, _resampler, false));
+
+            image.ProcessPixelRows(accessor =>
             {
-                imgHeight = image.Height;
-                imgWidth  = image.Width;
-
-                image.Mutate(x => x.Resize(_config.CropWidth, _config.CropHeight, _resampler, false));
-
-                image.ProcessPixelRows(accessor =>
+                for (int y = 0; y < accessor.Height; y++)
                 {
-                    for (int y = 0; y < accessor.Height; y++)
-                    {
-                        Span<Rgba32> pixelSpan = accessor.GetRowSpan(y);
+                    Span<Rgba32> pixelSpan = accessor.GetRowSpan(y);
 
-                        for (int x = 0; x < accessor.Width; x++)
-                        {
-                            input_normalized[i, 0, y, x] = ((pixelSpan[x].B * _config.RescaleFactor) - _config.ImageMean[0]) / _config.ImageStd[0];
-                            input_normalized[i, 1, y, x] = ((pixelSpan[x].G * _config.RescaleFactor) - _config.ImageMean[1]) / _config.ImageStd[1];
-                            input_normalized[i, 2, y, x] = ((pixelSpan[x].R * _config.RescaleFactor) - _config.ImageMean[2]) / _config.ImageStd[2];
-                        }
+                    for (int x = 0; x < accessor.Width; x++)
+                    {
+                        input_normalized[0, y, x] = ((pixelSpan[x].B * _config.RescaleFactor) - _config.ImageMean[0]) / _config.ImageStd[0];
+                        input_normalized[1, y, x] = ((pixelSpan[x].G * _config.RescaleFactor) - _config.ImageMean[1]) / _config.ImageStd[1];
+                        input_normalized[2, y, x] = ((pixelSpan[x].R * _config.RescaleFactor) - _config.ImageMean[2]) / _config.ImageStd[2];
                     }
-                });
-            }
-            imgSizes[i] = (imgWidth, imgHeight);
+                }
+            });
         }
 
-
-        return (input_normalized, imgSizes);
+        return (input_normalized, (imgWidth, imgHeight));
     }
 
 

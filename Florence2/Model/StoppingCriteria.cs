@@ -23,15 +23,25 @@ public class MaxLengthCriteria : StoppingCriteria
 }
 public class EosTokenCriteria : StoppingCriteria
 {
-    private readonly long eosTokenID;
+    private readonly long[] eosTokenID;
 
-    public EosTokenCriteria(long eosTokenID)
+    public EosTokenCriteria(long[] eosTokenID)
     {
         this.eosTokenID = eosTokenID;
     }
 
+    public EosTokenCriteria(long eosTokenID)
+    {
+        this.eosTokenID = new long[] { eosTokenID };
+    }
+
     public bool[] Call(List<long>[] inputIds, double[] scores)
     {
-        return inputIds.Select(ids => ids.Last() == eosTokenID).ToArray();
+        return inputIds.Select(ids =>
+        {
+            var last = ids.Last();
+
+            return this.eosTokenID.Any(eosID => last == eosID);
+        }).ToArray();
     }
 }
