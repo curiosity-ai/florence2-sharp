@@ -99,7 +99,6 @@ public class FlorenceModelDownloader : IModelSource
                                 var buffer            = new byte[2 << 18]; // 512kb
                                 var isMoreToRead      = true;
 
-
                                 using (var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None, 2 << 18 /* 512kb */, true))
                                 {
                                     bool finished = false;
@@ -166,6 +165,7 @@ public class FlorenceModelDownloader : IModelSource
 
                                 onStatusUpdate(GetStatus(totalDownloadSize, totalDownloadSize, 0, TimeSpan.Zero, $"Downloading Florence2 Model {model}"));
 
+                                _modelPaths.Add(model, filePath);
                             }
                             else
                             {
@@ -214,7 +214,7 @@ public class FlorenceModelDownloader : IModelSource
         }
         else
         {
-            logger?.LogDebug($"model {model} already downloaded");
+            logger?.LogDebug("Model {0} already downloaded", model);
             _modelPaths.Add(model, filePath);
             return Task.CompletedTask;
         }
