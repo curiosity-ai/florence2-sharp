@@ -55,13 +55,13 @@ await modelSource.DownloadModelsAsync();
 var model = new Florence2Model(modelSource);
 
 // Load an image stream
-using var imgStream = File.OpenRead("example.jpg");
+using var imgStream = File.OpenRead("car.jpg");
 
 // Optional text for phrase grounding (may be null)
 string phrase = "the red car";
 
 // Choose a task: Captioning / OCR / ObjectDetection / PhraseGrounding / RegionOCR
-var task = FlorenceTask.Caption;
+var task = TaskTypes.OCR_WITH_REGION;
 
 // Run inference
 var results = model.Run(task, imgStream, textInput: phrase);

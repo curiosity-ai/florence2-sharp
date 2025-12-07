@@ -13,7 +13,7 @@ public enum TaskTypes
     OD,
     DENSE_REGION_CAPTION,
     CAPTION_TO_PHRASE_GROUNDING,
-    REFERRING_EXPRESSION_SEGMENTATION, //TODO pius: not working properly, generated tokens don't seem to be ok
+    REFERRING_EXPRESSION_SEGMENTATION, //TODO: REFERRING_EXPRESSION_SEGMENTATION is not working properly, generated tokens are not valid
     REGION_TO_SEGMENTATION,
     OPEN_VOCABULARY_DETECTION,
     REGION_TO_CATEGORY,
