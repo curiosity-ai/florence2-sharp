@@ -74,13 +74,22 @@ Console.WriteLine(JsonSerializer.Serialize(results, new JsonSerializerOptions() 
 
 ## 📚 Supported Tasks
 
-| Task              | Description                                           |
-| ----------------- | ----------------------------------------------------- |
-| `Caption`         | Generates a caption describing the entire image.      |
-| `OCR`             | Extracts all text from the image.                     |
-| `RegionOCR`       | Extracts text from specified bounding boxes.          |
-| `ObjectDetection` | Detects objects and provides bounding boxes + labels. |
-| `PhraseGrounding` | Highlights regions relating to a provided phrase.     |
+| Task | Description |
+| :--- | :--- |
+| `TaskTypes.OCR` | **Optical Character Recognition**: Extracts all text recognized in the image. |
+| `TaskTypes.OCR_WITH_REGION` | Extracts all text from the image and provides the bounding box (quad-box) for each detected text region. |
+| `TaskTypes.CAPTION` | Generates a brief caption describing the entire image. |
+| `TaskTypes.DETAILED_CAPTION` | Generates a detailed description of the image, covering more elements than the standard caption. |
+| `TaskTypes.MORE_DETAILED_CAPTION` | Generates a highly comprehensive and lengthy description of the image contents. |
+| `TaskTypes.OD` | **Object Detection**: Detects objects in the image and provides their bounding boxes and class labels. |
+| `TaskTypes.DENSE_REGION_CAPTION` | Detects a large number of regions (densely packed) and provides a caption/label for each bounding box. |
+| `TaskTypes.CAPTION_TO_PHRASE_GROUNDING`| **Phrase Grounding**: Highlights/localizes regions (bounding boxes) that correspond to specific phrases provided in a text input. |
+| `TaskTypes.REGION_TO_SEGMENTATION` | Generates a segmentation mask for an object defined by a provided bounding box. |
+| `TaskTypes.OPEN_VOCABULARY_DETECTION` | Detects objects matching a provided text prompt (similar to phrase grounding, but often used to detect specific classes). |
+| `TaskTypes.REGION_TO_CATEGORY` | Classifies the object contained within a specific provided bounding box. |
+| `TaskTypes.REGION_TO_DESCRIPTION` | Generates a description or caption for a specific region defined by a provided bounding box. |
+| `TaskTypes.REGION_TO_OCR` | Extracts text specifically from a region defined by a provided bounding box. |
+| `TaskTypes.REGION_PROPOSAL` | Identifies and outputs bounding boxes for salient regions or potential objects in the image without labels. |
 
 ---
 
