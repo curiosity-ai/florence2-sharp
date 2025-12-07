@@ -135,19 +135,22 @@ public class Florence2Model
 
         NamedOnnxValue[] pastKeyValues = null;
 
-        var logitsProcessors = new List<LogitsProcessor>();
-
-        logitsProcessors.Add(new NoRepeatNGramLogitsProcessor(noRepeatNgramSize));
-        logitsProcessors.Add(new ForcedBOSTokenLogitsProcessor(_tokenizer.TokenToID(_tokenizer.Tokens.BeginningOfSequence)));
-        logitsProcessors.Add(new ForcedEOSTokenLogitsProcessor(maxLength, _tokenizer.TokenToID(_tokenizer.Tokens.EndOfSequence)));
+        var logitsProcessors = new List<LogitsProcessor>
+        {
+            new NoRepeatNGramLogitsProcessor(noRepeatNgramSize),
+            new ForcedBOSTokenLogitsProcessor(_tokenizer.TokenToID(_tokenizer.Tokens.BeginningOfSequence)),
+            new ForcedEOSTokenLogitsProcessor(maxLength, _tokenizer.TokenToID(_tokenizer.Tokens.EndOfSequence))
+        };
 
         var sampler = new BeamSearchSampler(TensorOperationRegistry.TopKSession(_sessionOptions), topK: topK, numBeams: numBeams);
 
         var eosToken = _tokenizer.TokenToID(_tokenizer.Tokens.EndOfSequence);
 
-        var stoppingCriteria = new List<StoppingCriteria>();
-        stoppingCriteria.Add(new MaxLengthCriteria(maxLength));
-        stoppingCriteria.Add(new EosTokenCriteria(eosToken));
+        var stoppingCriteria = new List<StoppingCriteria>
+        {
+            new MaxLengthCriteria(maxLength),
+            new EosTokenCriteria(eosToken)
+        };
 
         var decoder = new ByteLevelDecoder(_tokenizer.AddedTokens);
 
