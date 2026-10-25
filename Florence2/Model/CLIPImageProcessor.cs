@@ -1,10 +1,7 @@
 using System;
 using System.IO;
 using Microsoft.ML.OnnxRuntime.Tensors;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
-using SixLabors.ImageSharp.Processing.Processors.Transforms;
+using SkiaSharp;
 
 namespace Florence2;
 
@@ -12,19 +9,16 @@ public class CLIPImageProcessor
 {
 
     private CLIPConfig _config;
-    private IResampler _resampler;
 
 
-    public CLIPImageProcessor(CLIPConfig config, IResampler? resampler = null)
+    public CLIPImageProcessor(CLIPConfig config)
     {
-        _config    = config;
-        _resampler = resampler ?? KnownResamplers.Bicubic;
-
+        _config = config;
     }
 
     public (DenseTensor<float> pixel_values, (int imgWidth, int imgHeight)[] imgSizes) Preprocess(params Stream[] imgStream)
     {
-        //TODO pius: this is not 100% the same as the python pillow library. The handling of JPG color profiles seems to be different as well as how the resizing alhorithm works. (even though both ar Bicubic)
+        //TODO pius: this is not 100% the same as the python pillow library. The handling of JPG color profiles seems to be different.
 
         DenseTensor<float> input_normalized = new DenseTensor<float>(new[] { imgStream.Length, 3, _config.CropWidth, _config.CropHeight });
 
@@ -32,36 +26,39 @@ public class CLIPImageProcessor
 
         for (int i = 0; i < imgStream.Length; i++)
         {
-            int imgHeight = -1;
-            int imgWidth  = -1;
+            using var image = LoadRgba(imgStream[i]);
 
-            using (var image = Image.Load<Rgba32>(imgStream[i]))
+            int imgHeight = image.Height;
+            int imgWidth  = image.Width;
+
+            var resized = BicubicResample.Resize(image.GetPixelSpan(), imgWidth, imgHeight, _config.CropWidth, _config.CropHeight);
+
+            for (int y = 0; y < _config.CropHeight; y++)
             {
-                imgHeight = image.Height;
-                imgWidth  = image.Width;
-
-                image.Mutate(x => x.Resize(_config.CropWidth, _config.CropHeight, _resampler, false));
-
-                image.ProcessPixelRows(accessor =>
+                for (int x = 0; x < _config.CropWidth; x++)
                 {
-                    for (int y = 0; y < accessor.Height; y++)
-                    {
-                        Span<Rgba32> pixelSpan = accessor.GetRowSpan(y);
+                    int p = (y * _config.CropWidth + x) * 4;
 
-                        for (int x = 0; x < accessor.Width; x++)
-                        {
-                            input_normalized[i, 0, y, x] = ((pixelSpan[x].B * _config.RescaleFactor) - _config.ImageMean[0]) / _config.ImageStd[0];
-                            input_normalized[i, 1, y, x] = ((pixelSpan[x].G * _config.RescaleFactor) - _config.ImageMean[1]) / _config.ImageStd[1];
-                            input_normalized[i, 2, y, x] = ((pixelSpan[x].R * _config.RescaleFactor) - _config.ImageMean[2]) / _config.ImageStd[2];
-                        }
-                    }
-                });
+                    input_normalized[i, 0, y, x] = ((resized[p + 2] * _config.RescaleFactor) - _config.ImageMean[0]) / _config.ImageStd[0];
+                    input_normalized[i, 1, y, x] = ((resized[p + 1] * _config.RescaleFactor) - _config.ImageMean[1]) / _config.ImageStd[1];
+                    input_normalized[i, 2, y, x] = ((resized[p + 0] * _config.RescaleFactor) - _config.ImageMean[2]) / _config.ImageStd[2];
+                }
             }
+
             imgSizes[i] = (imgWidth, imgHeight);
         }
 
 
         return (input_normalized, imgSizes);
+    }
+
+    private static SKBitmap LoadRgba(Stream stream)
+    {
+        using var codec = SKCodec.Create(stream) ?? throw new InvalidOperationException("Unsupported or invalid image format.");
+
+        var info   = new SKImageInfo(codec.Info.Width, codec.Info.Height, SKColorType.Rgba8888, SKAlphaType.Unpremul);
+        var bitmap = SKBitmap.Decode(codec, info) ?? throw new InvalidOperationException("Failed to decode image.");
+        return bitmap;
     }
 
 
