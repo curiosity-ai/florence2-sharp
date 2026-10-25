@@ -4,11 +4,7 @@ using System.Text;
 using System.Text.Json;
 using Florence2;
 using Microsoft.Extensions.Logging;
-using SixLabors.Fonts;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
-using SixLabors.ImageSharp.Drawing.Processing;
+using SkiaSharp;
 using ZLogger;
 
 namespace Florence2.Test;
@@ -60,133 +56,138 @@ public static class Programm
 
         outFolder ??= Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
 
-        var penBox = Pens.Solid(Color.Red, 1.0f);
+        using var penBox = new SKPaint { Color = SKColors.Red, Style = SKPaintStyle.Stroke, StrokeWidth = 1.0f, IsAntialias = true };
+        using var textFill = new SKPaint { Color = SKColors.Black, Style = SKPaintStyle.Fill, IsAntialias = true };
+        using var textStroke = new SKPaint { Color = SKColors.White, Style = SKPaintStyle.Stroke, StrokeWidth = 1.0f, IsAntialias = true };
 
         if (Florence2Model.TaskPromptsWithoutInputsDict.ContainsKey(task))
         {
             userText = "";
         }
 
-        var fontFamily = DefaultFont.Value;
-        var font       = fontFamily.CreateFont(12, FontStyle.Italic);
+        using var font = new SKFont(DefaultTypeface.Value, 12);
 
-        using (var image = Image.Load<Rgba32>(imgStreamResult))
+        void DrawPolygon(SKCanvas canvas, SKPoint[] points)
         {
-            image.Mutate(x =>
+            canvas.DrawPoints(SKPointMode.Polygon, points.Append(points[0]).ToArray(), penBox);
+        }
+
+        void DrawText(SKCanvas canvas, string text, SKPoint point)
+        {
+            // Draw from the top-left corner like the polygon origin, so offset by the font ascent
+            var baseline = new SKPoint(point.X, point.Y - font.Metrics.Ascent);
+            canvas.DrawText(text, baseline, SKTextAlign.Left, font, textStroke);
+            canvas.DrawText(text, baseline, SKTextAlign.Left, font, textFill);
+        }
+
+        SKPoint[] BoxToPolygon((float xmin, float ymin, float xmax, float ymax) box) => new[]
+        {
+            new SKPoint(box.xmin, box.ymin),
+            new SKPoint(box.xmin, box.ymax),
+            new SKPoint(box.xmax, box.ymax),
+            new SKPoint(box.xmax, box.ymin),
+        };
+
+        using (var image = SKBitmap.Decode(imgStreamResult))
+        using (var canvas = new SKCanvas(image))
+        {
+            for (var index = 0; index < results.Length; index++)
             {
-                for (var index = 0; index < results.Length; index++)
+                var finalResult = results[index];
+
+                if (finalResult.BoundingBoxes is object)
                 {
-                    var finalResult = results[index];
-
-                    if (finalResult.BoundingBoxes is object)
+                    foreach (var bbox1 in finalResult.BoundingBoxes)
                     {
-                        var i = 0;
+                        SKPoint? labelPoint = null;
 
-                        foreach (var bbox1 in finalResult.BoundingBoxes)
+                        foreach (var bboxBBox in bbox1.BBoxes)
                         {
-                            PointF? labelPoint = null;
-
-                            foreach (var bboxBBox in bbox1.BBoxes)
-                            {
-                                var polygon = new List<PointF>();
-                                var p       = new PointF(bboxBBox.xmin, bboxBBox.ymin);
-
-                                labelPoint ??= p;
-
-                                polygon.Add(p);
-                                polygon.Add(new PointF(bboxBBox.xmin, bboxBBox.ymax));
-                                polygon.Add(new PointF(bboxBBox.xmax, bboxBBox.ymax));
-                                polygon.Add(new PointF(bboxBBox.xmax, bboxBBox.ymin));
-
-                                x.DrawPolygon(penBox, polygon.ToArray());
-
-                            }
-
-                            var label = bbox1.Label;
-                            x.DrawText(label, font, Brushes.Solid(Color.Black), Pens.Solid(Color.White, 1), labelPoint.Value);
-                            i++;
+                            var polygon = BoxToPolygon((bboxBBox.xmin, bboxBBox.ymin, bboxBBox.xmax, bboxBBox.ymax));
+                            labelPoint ??= polygon[0];
+                            DrawPolygon(canvas, polygon);
                         }
 
+                        DrawText(canvas, bbox1.Label, labelPoint.Value);
                     }
-
-                    if (finalResult.OCRBBox is object)
-                    {
-                        foreach (var labledOcr in finalResult.OCRBBox)
-                        {
-                            var polygon = labledOcr.QuadBox.Select(e => new PointF(e.x, e.y)).ToArray();
-                            x.DrawPolygon(penBox, polygon);
-                            var textZero = polygon.First();
-                            x.DrawText(labledOcr.Text, font, Brushes.Solid(Color.Black), Pens.Solid(Color.White, 1), textZero);
-
-                        }
-                    }
-
-                    if (finalResult.Polygons is object)
-                    {
-                        foreach (var finalResultPolygon in finalResult.Polygons)
-                        {
-                            PointF? labelPoint = null;
-
-                            if (finalResultPolygon.Polygon is object)
-                            {
-                                var polygon1 = finalResultPolygon.Polygon.Select(e =>
-                                {
-                                    var p = new PointF(e.x, e.y);
-                                    labelPoint ??= p;
-                                    return p;
-                                }).ToArray();
-                                x.DrawPolygon(penBox, polygon1);
-                            }
-
-                            if (finalResultPolygon.BBoxes is object)
-                            {
-                                foreach (var bboxBBox in finalResultPolygon.BBoxes)
-                                {
-                                    var polygon = new List<PointF>();
-                                    var p       = new PointF(bboxBBox.xmin, bboxBBox.ymin);
-
-                                    labelPoint ??= p;
-
-                                    polygon.Add(p);
-                                    polygon.Add(new PointF(bboxBBox.xmin, bboxBBox.ymax));
-                                    polygon.Add(new PointF(bboxBBox.xmax, bboxBBox.ymax));
-                                    polygon.Add(new PointF(bboxBBox.xmax, bboxBBox.ymin));
-
-                                    x.DrawPolygon(penBox, polygon.ToArray());
-
-                                }
-                            }
-
-                            x.DrawText(finalResultPolygon.Label, font, Brushes.Solid(Color.Black), Pens.Solid(Color.White, 1), labelPoint.Value);
-                        }
-                    }
-
                 }
-            });
 
-            image.SaveAsBmp($"{outFolder}/book-{task}-{userText}.bmp");
+                if (finalResult.OCRBBox is object)
+                {
+                    foreach (var labledOcr in finalResult.OCRBBox)
+                    {
+                        var polygon = labledOcr.QuadBox.Select(e => new SKPoint(e.x, e.y)).ToArray();
+                        DrawPolygon(canvas, polygon);
+                        DrawText(canvas, labledOcr.Text, polygon.First());
+                    }
+                }
+
+                if (finalResult.Polygons is object)
+                {
+                    foreach (var finalResultPolygon in finalResult.Polygons)
+                    {
+                        SKPoint? labelPoint = null;
+
+                        if (finalResultPolygon.Polygon is object)
+                        {
+                            var polygon1 = finalResultPolygon.Polygon.Select(e => new SKPoint(e.x, e.y)).ToArray();
+                            labelPoint ??= polygon1.FirstOrDefault();
+                            DrawPolygon(canvas, polygon1);
+                        }
+
+                        if (finalResultPolygon.BBoxes is object)
+                        {
+                            foreach (var bboxBBox in finalResultPolygon.BBoxes)
+                            {
+                                var polygon = BoxToPolygon((bboxBBox.xmin, bboxBBox.ymin, bboxBBox.xmax, bboxBBox.ymax));
+                                labelPoint ??= polygon[0];
+                                DrawPolygon(canvas, polygon);
+                            }
+                        }
+
+                        DrawText(canvas, finalResultPolygon.Label, labelPoint.Value);
+                    }
+                }
+            }
+
+            canvas.Flush();
+
+            using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+            using var file = File.Create($"{outFolder}/book-{task}-{userText}.png");
+            data.SaveTo(file);
         }
     }
 
-    private static Lazy<FontFamily> DefaultFont = new Lazy<FontFamily>(() => GetDefaultFont());
-    private static FontFamily GetDefaultFont()
+    private static Lazy<SKTypeface> DefaultTypeface = new Lazy<SKTypeface>(() => GetDefaultTypeface());
+    private static SKTypeface GetDefaultTypeface()
     {
-        FontFamily? best = null;
+        var candidates = OperatingSystem.IsLinux()
+            ? new[] { "Arial", "Ubuntu", "Liberation Sans", "DejaVu Sans", "Rasa", "FreeSans" }
+            : new[] { "Arial" };
 
-        if (OperatingSystem.IsWindows() || OperatingSystem.IsMacOS())
+        var style = new SKFontStyle(SKFontStyleWeight.Normal, SKFontStyleWidth.Normal, SKFontStyleSlant.Italic);
+
+        foreach (var name in candidates)
         {
-            best = SystemFonts.Get("Arial");
+            var typeface = SKFontManager.Default.MatchFamily(name, style);
+            if (typeface is object) return typeface;
         }
-        else if (OperatingSystem.IsLinux())
+
+        if (OperatingSystem.IsLinux())
         {
-            best = SystemFonts.TryGet("Arial",        out var arial) ? arial :
-                SystemFonts.TryGet("Ubuntu",          out var sf)    ? sf :
-                SystemFonts.TryGet("Liberation Sans", out var ls)    ? ls :
-                SystemFonts.TryGet("DejaVu Sans",     out var dvs)   ? dvs :
-                SystemFonts.TryGet("Rasa",            out var rasa)  ? rasa :
-                SystemFonts.TryGet("FreeSans",        out var fs)    ? fs :
-                                                                       null;
+            // Builds of Skia without fontconfig can't resolve family names, so look for a font file directly
+            var fontFiles = new[] { "/usr/share/fonts", "/usr/local/share/fonts" }
+               .Where(Directory.Exists)
+               .SelectMany(d => Directory.EnumerateFiles(d, "*.ttf", SearchOption.AllDirectories))
+               .ToArray();
+
+            foreach (var name in candidates.Select(c => c.Replace(" ", "")))
+            {
+                var file = fontFiles.FirstOrDefault(f => Path.GetFileNameWithoutExtension(f).StartsWith(name, StringComparison.OrdinalIgnoreCase));
+                if (file is object && SKTypeface.FromFile(file) is SKTypeface typeface) return typeface;
+            }
         }
-        return best ?? SystemFonts.Families.FirstOrDefault(f => f.Name.Contains("Sans"), SystemFonts.Families.First());
+
+        return SKTypeface.FromFamilyName(null, style) ?? SKTypeface.Default;
     }
 }

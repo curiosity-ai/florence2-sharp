@@ -5,7 +5,6 @@ using System.Linq;
 using System.Threading;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
-using SixLabors.ImageSharp.Processing;
 
 namespace Florence2;
 
@@ -62,7 +61,7 @@ public class Florence2Model
             RescaleFactor  = 0.00392156862745098f,
             CropHeight     = 768,
             CropWidth      = 768,
-        }, KnownResamplers.Bicubic);
+        });
         _postProcessor = new Florence2PostProcessor();
 
     }
