@@ -29,7 +29,6 @@ public class FlorenceModelDownloader : IModelSource
     public FlorenceModelDownloader(string modelFolderBasePath)
     {
         _modelFolderBasePath = modelFolderBasePath;
-        Directory.CreateDirectory(_modelFolderBasePath);
         PreInitializeRepositoryFromDisk();
     }
 
@@ -98,6 +97,9 @@ public class FlorenceModelDownloader : IModelSource
                                 var previousBytesRead = 0L;
                                 var buffer            = new byte[2 << 18]; // 512kb
                                 var isMoreToRead      = true;
+
+                                //Created here, not in the constructor: asking whether the models are on disk must not create the folder
+                                Directory.CreateDirectory(_modelFolderBasePath);
 
                                 using (var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None, 2 << 18 /* 512kb */, true))
                                 {
